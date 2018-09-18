@@ -29,10 +29,14 @@ import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.source.dash.DashChunkSource;
+import com.google.android.exoplayer2.source.dash.DashMediaSource;
+import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource;
 import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.TrackSelection;
 import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
@@ -103,7 +107,7 @@ public class PlayerActivity extends AppCompatActivity {
             player.setPlayWhenReady(playWhenReady);
             player.seekTo(currentWindow, playbackPosition);
         }
-        MediaSource mediaSource = buildMediaSource(Uri.parse(getString(R.string.media_url_mp4)));
+        MediaSource mediaSource = buildMediaSource(Uri.parse(getString(R.string.media_url_dash)));
         player.prepare(mediaSource, true, false);
     }
 
@@ -119,15 +123,12 @@ public class PlayerActivity extends AppCompatActivity {
 
     private MediaSource buildMediaSource(Uri uri) {
         //DefaultExtractorsFactory extractorsFactory = new DefaultExtractorsFactory();
-        //DefaultHttpDataSourceFactory dataSourceFactory = new DefaultHttpDataSourceFactory("user-agent");
-        ExtractorMediaSource videoSource = new ExtractorMediaSource.Factory(
-                new DefaultHttpDataSourceFactory("exoplayer-codelab")
-        ).createMediaSource(uri);
-        Uri audioUri = Uri.parse(getString(R.string.media_url_mp3));
-        ExtractorMediaSource audioSource = new ExtractorMediaSource.Factory(
-                new DefaultHttpDataSourceFactory("exoplayer-codelab")
-        ).createMediaSource(audioUri);
-        return new ConcatenatingMediaSource(audioSource, videoSource);
+        DataSource.Factory manifestDataSourceFactory = new DefaultHttpDataSourceFactory("user-agent");
+        DashChunkSource.Factory dashChunkSourceFactory = new DefaultDashChunkSource.Factory(
+                new DefaultHttpDataSourceFactory("ua", BANDWIDTH_METER)
+        );
+        return new DashMediaSource.Factory(dashChunkSourceFactory, manifestDataSourceFactory)
+                .createMediaSource(uri);
     }
 
     @SuppressLint("InlinedApi")
