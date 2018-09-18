@@ -28,10 +28,12 @@ import com.google.android.exoplayer2.DefaultRenderersFactory;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.Format;
+import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.audio.AudioRendererEventListener;
 import com.google.android.exoplayer2.decoder.DecoderCounters;
+import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.dash.DashChunkSource;
 import com.google.android.exoplayer2.source.dash.DashMediaSource;
@@ -52,6 +54,8 @@ import com.google.android.exoplayer2.video.VideoRendererEventListener;
  */
 public class PlayerActivity extends AppCompatActivity {
 
+    public static final PlaybackParameters HALF_PLAYBACK_PARAMETERS = new PlaybackParameters(0.5F, 1F);
+    public static final PlaybackParameters DOUBLE_PLAYBACK_PARAMETERS = new PlaybackParameters(2F, 1F);
     private final String TAG = getClass().getSimpleName();
     // bandwidth meter to measure and estimate bandwidth
     private static final DefaultBandwidthMeter BANDWIDTH_METER = new DefaultBandwidthMeter();
@@ -125,7 +129,7 @@ public class PlayerActivity extends AppCompatActivity {
             player.addVideoDebugListener(videoRendererEventListener);
             player.addAudioDebugListener(audioRendererEventListener);
         }
-        MediaSource mediaSource = buildMediaSource(Uri.parse(getString(R.string.media_url_dash)));
+        MediaSource mediaSource = buildMediaSource(Uri.parse(getString(R.string.media_url_mp3)));
         player.prepare(mediaSource, true, false);
     }
 
@@ -142,11 +146,28 @@ public class PlayerActivity extends AppCompatActivity {
         }
     }
 
-    private MediaSource buildMediaSource(Uri uri) {
+    /**
+     * 播放DASH视频
+     * @param uri
+     * @return
+     */
+    /*private MediaSource buildMediaSource(Uri uri) {
         DashChunkSource.Factory dashChunkSourceFactory = new DefaultDashChunkSource.Factory(
                 new DefaultHttpDataSourceFactory("ua", BANDWIDTH_METER));
         DataSource.Factory manifestDataSourceFactory = new DefaultHttpDataSourceFactory("ua");
         return new DashMediaSource.Factory(dashChunkSourceFactory, manifestDataSourceFactory).
+                createMediaSource(uri);
+    }*/
+
+    /**
+     * 播放MP3
+     *
+     * @param uri
+     * @return
+     */
+    private MediaSource buildMediaSource(Uri uri) {
+        return new ExtractorMediaSource.Factory(
+                new DefaultHttpDataSourceFactory("exoplayer-codelab")).
                 createMediaSource(uri);
     }
 
@@ -158,6 +179,17 @@ public class PlayerActivity extends AppCompatActivity {
                 | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                 | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+    }
+
+    public void adjustSpeed(View view) {
+        int id = view.getId();
+        if (id == R.id.btn_half_speed) {
+            player.setPlaybackParameters(HALF_PLAYBACK_PARAMETERS);
+        } else if (id == R.id.btn_normal_speed) {
+            player.setPlaybackParameters(PlaybackParameters.DEFAULT);
+        } else if (id == R.id.btn_double_speed) {
+            player.setPlaybackParameters(DOUBLE_PLAYBACK_PARAMETERS);
+        }
     }
 
     /**
