@@ -33,6 +33,7 @@ import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.audio.AudioRendererEventListener;
 import com.google.android.exoplayer2.decoder.DecoderCounters;
+import com.google.android.exoplayer2.source.ClippingMediaSource;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.dash.DashChunkSource;
@@ -129,7 +130,7 @@ public class PlayerActivity extends AppCompatActivity {
             player.addVideoDebugListener(videoRendererEventListener);
             player.addAudioDebugListener(audioRendererEventListener);
         }
-        MediaSource mediaSource = buildMediaSource(Uri.parse(getString(R.string.media_url_mp3)));
+        MediaSource mediaSource = buildMediaSource(Uri.parse(getString(R.string.media_url_dash)));
         player.prepare(mediaSource, true, false);
     }
 
@@ -148,28 +149,48 @@ public class PlayerActivity extends AppCompatActivity {
 
     /**
      * 播放DASH视频
-     * @param uri
+     *
+     * @param uri dash类型的uri
      * @return
      */
-    /*private MediaSource buildMediaSource(Uri uri) {
+    private MediaSource buildMediaSource(Uri uri) {
         DashChunkSource.Factory dashChunkSourceFactory = new DefaultDashChunkSource.Factory(
                 new DefaultHttpDataSourceFactory("ua", BANDWIDTH_METER));
         DataSource.Factory manifestDataSourceFactory = new DefaultHttpDataSourceFactory("ua");
-        return new DashMediaSource.Factory(dashChunkSourceFactory, manifestDataSourceFactory).
+        DashMediaSource dashMediaSource = new DashMediaSource.Factory(dashChunkSourceFactory, manifestDataSourceFactory).
+                createMediaSource(uri);
+        //单位是微秒
+        ClippingMediaSource clippingMediaSource = new ClippingMediaSource(dashMediaSource,
+                40_000_000, 80_000_000);
+        return clippingMediaSource;
+    }
+
+
+    /**
+     * @param uri MP3类型uri
+     * @return
+     */
+    /*private MediaSource buildMediaSource(Uri uri) {
+        return new ExtractorMediaSource.Factory(
+                new DefaultHttpDataSourceFactory("exoplayer-codelab")).
                 createMediaSource(uri);
     }*/
 
     /**
-     * 播放MP3
+     * 只播放视频的一部分 比如从第10秒到30秒的部分
      *
-     * @param uri
+     * @param uri 常规类型媒体文件 比如MP4
      * @return
      */
-    private MediaSource buildMediaSource(Uri uri) {
-        return new ExtractorMediaSource.Factory(
+    /*private MediaSource buildMediaSource(Uri uri) {
+        ExtractorMediaSource mp4MediaSource = new ExtractorMediaSource.Factory(
                 new DefaultHttpDataSourceFactory("exoplayer-codelab")).
                 createMediaSource(uri);
-    }
+        //单位是微秒
+        ClippingMediaSource clippingMediaSource = new ClippingMediaSource(mp4MediaSource,
+                40_000_000, 80_000_000);
+        return clippingMediaSource;
+    }*/
 
     @SuppressLint("InlinedApi")
     private void hideSystemUi() {
