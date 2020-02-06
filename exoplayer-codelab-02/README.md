@@ -23,3 +23,5 @@ MediaSource的四种分类
         return clippingMediaSource;
     }
 ```
+
+* [Android P(9.0) http网络请求的问题](https://www.jianshu.com/p/57047a84e559)

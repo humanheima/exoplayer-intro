@@ -3,7 +3,10 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/exoplayer-codelab-03.iml" filepath="$PROJECT_DIR$/exoplayer-codelab-03.iml" />
+      <module fileurl="file://$PROJECT_DIR$/exoplayer-codelab-03.iml" filepath="$PROJECT_DIR$/exoplayer-codelab-03.iml" />
+      <module fileurl="file://$PROJECT_DIR$/player-lib/player-lib.iml" filepath="$PROJECT_DIR$/player-lib/player-lib.iml" />
       <module fileurl="file://$PROJECT_DIR$/player-lib/player-lib.iml" filepath="$PROJECT_DIR$/player-lib/player-lib.iml" />
     </modules>
   </component>

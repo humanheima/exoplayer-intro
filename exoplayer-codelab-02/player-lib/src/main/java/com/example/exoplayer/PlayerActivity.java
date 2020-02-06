@@ -18,15 +18,12 @@ package com.example.exoplayer;
 import android.annotation.SuppressLint;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Surface;
 import android.view.View;
 
-import com.google.android.exoplayer2.DefaultLoadControl;
-import com.google.android.exoplayer2.DefaultRenderersFactory;
-import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.ExoPlayerFactory;
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
@@ -34,19 +31,19 @@ import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.audio.AudioRendererEventListener;
 import com.google.android.exoplayer2.decoder.DecoderCounters;
 import com.google.android.exoplayer2.source.ClippingMediaSource;
-import com.google.android.exoplayer2.source.ExtractorMediaSource;
+import com.google.android.exoplayer2.source.LoopingMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.source.ProgressiveMediaSource;
 import com.google.android.exoplayer2.source.dash.DashChunkSource;
 import com.google.android.exoplayer2.source.dash.DashMediaSource;
 import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource;
-import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
-import com.google.android.exoplayer2.trackselection.TrackSelection;
-import com.google.android.exoplayer2.ui.PlayerControlView;
 import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
+import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory;
+import com.google.android.exoplayer2.util.EventLogger;
 import com.google.android.exoplayer2.util.Util;
 import com.google.android.exoplayer2.video.VideoRendererEventListener;
 
@@ -59,7 +56,8 @@ public class PlayerActivity extends AppCompatActivity {
     public static final PlaybackParameters DOUBLE_PLAYBACK_PARAMETERS = new PlaybackParameters(2F, 1F);
     private final String TAG = getClass().getSimpleName();
     // bandwidth meter to measure and estimate bandwidth
-    private static final DefaultBandwidthMeter BANDWIDTH_METER = new DefaultBandwidthMeter();
+    private final DefaultBandwidthMeter BANDWIDTH_METER = new DefaultBandwidthMeter
+            .Builder(this).build();
 
     private SimpleExoPlayer player;
     private PlayerView playerView;
@@ -117,20 +115,21 @@ public class PlayerActivity extends AppCompatActivity {
 
     private void initializePlayer() {
         if (player == null) {
-            // a factory to create an AdaptiveVideoTrackSelection
-            TrackSelection.Factory adaptiveTrackSelectionFactory =
-                    new AdaptiveTrackSelection.Factory(BANDWIDTH_METER);
-            // let the factory create a player instance with default components
-            player = ExoPlayerFactory.newSimpleInstance(new DefaultRenderersFactory(this),
-                    new DefaultTrackSelector(adaptiveTrackSelectionFactory), new DefaultLoadControl());
+
+            player = new SimpleExoPlayer.Builder(this).build();
+
             playerView.setPlayer(player);
             player.setPlayWhenReady(playWhenReady);
             player.seekTo(currentWindow, playbackPosition);
             player.addListener(componentListener);
+            player.addAnalyticsListener(new EventLogger(new DefaultTrackSelector(this)));
             player.addVideoDebugListener(videoRendererEventListener);
             player.addAudioDebugListener(audioRendererEventListener);
         }
-        MediaSource mediaSource = buildMediaSource(Uri.parse(getString(R.string.media_url_dash)));
+        //MediaSource mediaSource = buildMediaSource(Uri.parse(getString(R.string.media_url_dash)));
+        //MediaSource mediaSource = buildMP4MediaSource(Uri.parse(getString(R.string.media_url_mp4_another)));
+        //MediaSource mediaSource = buildClippingMediaSource(Uri.parse(getString(R.string.media_url_mp4_another)));
+        MediaSource mediaSource = buildLoopMediaSource(Uri.parse(getString(R.string.media_url_mp4_another)));
         player.prepare(mediaSource, true, false);
     }
 
@@ -150,19 +149,16 @@ public class PlayerActivity extends AppCompatActivity {
     /**
      * 播放DASH视频
      *
-     * @param uri dash类型的uri
+     * @param uri DASH类型的uri
      * @return
      */
-    private MediaSource buildMediaSource(Uri uri) {
+    private MediaSource buildDASHMediaSource(Uri uri) {
         DashChunkSource.Factory dashChunkSourceFactory = new DefaultDashChunkSource.Factory(
                 new DefaultHttpDataSourceFactory("ua", BANDWIDTH_METER));
         DataSource.Factory manifestDataSourceFactory = new DefaultHttpDataSourceFactory("ua");
         DashMediaSource dashMediaSource = new DashMediaSource.Factory(dashChunkSourceFactory, manifestDataSourceFactory).
                 createMediaSource(uri);
-        //单位是微秒
-        ClippingMediaSource clippingMediaSource = new ClippingMediaSource(dashMediaSource,
-                40_000_000, 80_000_000);
-        return clippingMediaSource;
+        return dashMediaSource;
     }
 
 
@@ -177,20 +173,59 @@ public class PlayerActivity extends AppCompatActivity {
     }*/
 
     /**
-     * 只播放视频的一部分 比如从第10秒到30秒的部分
-     *
-     * @param uri 常规类型媒体文件 比如MP4
+     * @param uri MP4类型uri
      * @return
      */
-    /*private MediaSource buildMediaSource(Uri uri) {
-        ExtractorMediaSource mp4MediaSource = new ExtractorMediaSource.Factory(
-                new DefaultHttpDataSourceFactory("exoplayer-codelab")).
-                createMediaSource(uri);
+    private MediaSource buildMP4MediaSource(Uri uri) {
+
+        // Produces DataSource instances through which media data is loaded.
+        DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(this,
+                Util.getUserAgent(this, "exoplayer-codelab-2"));
+        MediaSource videoSource = new ProgressiveMediaSource.Factory(dataSourceFactory)
+                .createMediaSource(uri);
+
+        return videoSource;
+    }
+
+    /**
+     * 只播放视频的一部分 比如从第10秒到30秒的部分
+     *
+     * @param uri 常规类型媒体文件的uri 比如MP4
+     * @return
+     */
+    private MediaSource buildClippingMediaSource(Uri uri) {
+        MediaSource mp4MediaSource = new ProgressiveMediaSource.Factory(
+                new DefaultHttpDataSourceFactory(
+                        Util.getUserAgent(this, "exoplayer-codelab-2")
+                )
+        ).createMediaSource(uri);
         //单位是微秒
         ClippingMediaSource clippingMediaSource = new ClippingMediaSource(mp4MediaSource,
-                40_000_000, 80_000_000);
+                10_000_000, 30_000_000);
         return clippingMediaSource;
-    }*/
+    }
+
+    /**
+     * 循环播放视频
+     * <p>
+     * 对于无限循环的情况，请使用ExoPlayer.setRepeatMode而不是LoopingMediaSource。
+     *
+     * @param uri 常规类型媒体文件的uri 比如MP4
+     * @return
+     */
+    private MediaSource buildLoopMediaSource(Uri uri) {
+        MediaSource mp4MediaSource = new ProgressiveMediaSource.Factory(
+                new DefaultHttpDataSourceFactory(
+                        Util.getUserAgent(this, "exoplayer-codelab-2")
+                )
+        ).createMediaSource(uri);
+        //单位是微秒
+        ClippingMediaSource clippingMediaSource = new ClippingMediaSource(mp4MediaSource,
+                10_000_000, 30_000_000);
+
+        LoopingMediaSource loopingMediaSource = new LoopingMediaSource(clippingMediaSource, 2);
+        return loopingMediaSource;
+    }
 
     @SuppressLint("InlinedApi")
     private void hideSystemUi() {
@@ -216,7 +251,7 @@ public class PlayerActivity extends AppCompatActivity {
     /**
      * 监听播放状态
      */
-    private class ComponentListener extends Player.DefaultEventListener {
+    private class ComponentListener implements Player.EventListener {
 
         @Override
         public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
